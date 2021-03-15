@@ -78,6 +78,7 @@ def searchTPB(query):
 
 def searchRarbg(query, limit=3):
     torrents = []
+    i = 0    
     source = get(
         f"http://rargb.to/search/?search={query}"
         "&category[]=movies&category[]=tv&category[]=games&"
@@ -86,7 +87,6 @@ def searchRarbg(query, limit=3):
     ).text
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tr.lista2"):
-        i = 0
         tds = tr.select("td")
         torrent = get(f"http://rargb.to{tds[1].a['href']}").text
         torrent = BeautifulSoup(torrent, 'lxml')
@@ -98,7 +98,8 @@ def searchRarbg(query, limit=3):
             "size": tds[4].text,
             "uploader": tds[7].text,
             "link": f"http://rargb.to{tds[1].a['href']}",
-            "shorturl": shorten(e['href'])})
+            "magnet": e['href'],
+            "shortlink": shorten(e['href'])})
         if limit is not None:
             i += 1
         if i >= limit:
