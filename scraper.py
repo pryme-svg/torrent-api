@@ -53,9 +53,9 @@ def search1337x(query, limit=3):
         })
 
         if limit is not None:
+            i += 1
             if i >= limit:
                 break
-            i += 1
     return torrents
 
 
