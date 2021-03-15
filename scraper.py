@@ -91,6 +91,8 @@ def searchRarbg(query, limit=3):
         torrent = get(f"http://rargb.to{tds[1].a['href']}").text
         torrent = BeautifulSoup(torrent, 'lxml')
         e = torrent.find('a', href=re.compile(r"^magnet"))
+        if e is None:
+            e = {'href': None}
         torrents.append({
             "name": tds[1].a.text,
             "seeds": toInt(tds[5].font.text),

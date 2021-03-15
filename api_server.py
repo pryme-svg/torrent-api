@@ -1,6 +1,7 @@
 import flask
 import requests_cache
 from flask import request
+import traceback
 from flask import Response
 import json
 import scraper
@@ -37,5 +38,5 @@ def getTorrents():
         else:
             return Response(json.dumps({"torrents": scraper.search1337x(query)}), mimetype="application/json")
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
         return Response(json.dumps("Invalid Request"))
