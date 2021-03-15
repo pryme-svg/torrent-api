@@ -4,3 +4,4 @@ gunicorn
 flask
 requests
 lxml
+gevent
