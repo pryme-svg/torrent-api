@@ -13,7 +13,7 @@ app.config["DEBUG"] = True
 
 @app.route('/', methods=["GET"])
 def getSites():
-    sites = ["1337x", "tpb", "Ettvdl", "Rarbg"]
+    sites = ["1337x", "tpb", "Ettvdl", "Rarbg", 'nyaa']
     return Response(json.dumps({"sites": sites}), mimetype='application/json')
 
 
@@ -26,6 +26,8 @@ def getTorrents():
     try:
         if(site == "1337x"):
             return Response(json.dumps({"torrents": scraper.search1337x(query)}), mimetype="application/json")
+        elif(site == "nyaa"):
+            return Response(json.dumps({'torrents': scraper.searchNyaa(query)}), mimetype="application/json")
         elif(site == "tpb"):
             return Response(json.dumps({"torrents": scraper.searchTPB(query)}), mimetype="application/json")
         elif(site == "Rarbg"):

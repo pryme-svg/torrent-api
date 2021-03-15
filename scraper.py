@@ -76,7 +76,7 @@ def searchTPB(query):
     return torrents
 
 
-def searchRarbg(query):
+def searchRarbg(query, limit=3):
     torrents = []
     source = get(
         f"http://rargb.to/search/?search={query}"
@@ -86,14 +86,52 @@ def searchRarbg(query):
     ).text
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tr.lista2"):
+        i = 0
         tds = tr.select("td")
+        torrent = get(f"http://rargb.to{tds[1].a['href']}").text
+        torrent = BeautifulSoup(torrent, 'lxml')
+        e = torrent.find('a', href=re.compile(r"^magnet"))
         torrents.append({
             "name": tds[1].a.text,
             "seeds": toInt(tds[5].font.text),
             "leeches": toInt(tds[6].text),
             "size": tds[4].text,
             "uploader": tds[7].text,
-            "link": f"http://rargb.to{tds[1].a['href']}"})
+            "link": f"http://rargb.to{tds[1].a['href']}",
+            "shorturl": shorten(e['href'])})
+        if limit is not None:
+            i += 1
+        if i >= limit:
+            break
+    return torrents
+
+
+def searchNyaa(query, limit=3):
+    torrents = []
+    i = 0
+    source = get("https://nyaa.si/?q={}".format(query)).text
+    soup = BeautifulSoup(source, "lxml")
+    for tr in soup.select("tbody > tr"):
+        e = tr.select('td')
+        name = e[1].select('a')[-1]['title']
+        seeds = e[5].text
+        leeches = e[6].text
+        size = e[3].text
+        link = e[1].select('a')[-1]['href']
+        magnet = tr.find('a', href=re.compile(r"^magnet"))['href']
+        torrents.append({
+            "name": name,
+            "seeds": seeds,
+            "leeches": leeches,
+            "size": size,
+            "link": f"http://nyaa.si{link}",
+            "magnet": magnet,
+            "shortlink": shorten(magnet)
+        })
+        if limit is not None:
+            i += 1
+            if i >= limit:
+                break
     return torrents
 
 
