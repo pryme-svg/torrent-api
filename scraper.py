@@ -109,7 +109,7 @@ def searchRarbg(query, limit=3):
 def searchNyaa(query, limit=3):
     torrents = []
     i = 0
-    source = get("https://nyaa.si/?q={}".format(query)).text
+    source = get("https://nyaa.si/?q={}&s=seeders".format(query)).text
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tbody > tr"):
         e = tr.select('td')
