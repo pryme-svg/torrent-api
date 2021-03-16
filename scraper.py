@@ -80,7 +80,7 @@ def searchRarbg(query, limit=3):
     torrents = []
     i = 0    
     source = get(
-        f"http://rargb.to/search/?search={query}"
+        f"http://rarbg.to/search/?search={query}"
         "&category[]=movies&category[]=tv&category[]=games&"
         "category[]=music&category[]=anime&category[]=apps&"
         "category[]=documentaries&category[]=other"
@@ -88,7 +88,7 @@ def searchRarbg(query, limit=3):
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tr.lista2"):
         tds = tr.select("td")
-        torrent = get(f"http://rargb.to{tds[1].a['href']}").text
+        torrent = get(f"http://rarbg.to{tds[1].a['href']}").text
         torrent = BeautifulSoup(torrent, 'lxml')
         e = torrent.find('a', href=re.compile(r"^magnet"))
         if e is None:
@@ -99,7 +99,7 @@ def searchRarbg(query, limit=3):
             "leeches": toInt(tds[6].text),
             "size": tds[4].text,
             "uploader": tds[7].text,
-            "link": f"http://rargb.to{tds[1].a['href']}",
+            "link": f"http://rarbg.to{tds[1].a['href']}",
             "magnet": e['href'],
             "shortlink": shorten(e['href'])})
         if limit is not None:
