@@ -6,9 +6,9 @@ A working instance can be found at https://torrent-api1.herokuapp.com/
 
 ## Example
 
-https://torrent-api1.herokuapp.com/getTorrents?site=1337x&query=witcher
+https://torrent-api1.herokuapp.com/getTorrents?site=$site&query=$query
 
-Returns torrents for witcher
+Returns torrents for $query from $site
 
 ## Running
 
