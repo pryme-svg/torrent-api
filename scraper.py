@@ -1,4 +1,6 @@
 import re
+import aiohttp
+import asyncio
 import requests
 from bs4 import BeautifulSoup
 
@@ -30,17 +32,32 @@ def get(url):
 def toInt(value):
     return int(value.replace(',', ''))
 
+async def fetch(session, url):
+    async with session.get(url) as response:
+        if response.status != 200:
+            response.raise_for_status()
+        return await response.text()
 
-def search1337x(query, limit=3):
+async def fetch_all(session, urls):
+    tasks = []
+    for url in urls:
+        task = asyncio.create_task(fetch(session, url))
+        tasks.append(task)
+    results = await asyncio.gather(*tasks)
+    return results
+
+async def search1337x(query, limit=3):
     torrents = []
+    urls = []
     source = get(f"http://1337x.to/search/{query}/1/").text
     soup = BeautifulSoup(source, 'lxml')
     i = 0
     for tr in soup.select("tbody > tr"):
         a = tr.select("td.coll-1 > a")[1]
-        torrent = get("http://1337x.to{}".format(a['href'])).text
-        torrent = BeautifulSoup(torrent, 'lxml')
-        e = torrent.find('a', href=re.compile(r"^magnet"))
+        urls.append("http://1337x.to{}".format(a['href']))
+        #torrent = get("http://1337x.to{}".format(a['href'])).text
+        #torrent = BeautifulSoup(torrent, 'lxml')
+        #e = torrent.find('a', href=re.compile(r"^magnet"))
         torrents.append({
             "name": a.text,
             "seeds": int(tr.select("td.coll-2")[0].text),
@@ -48,14 +65,21 @@ def search1337x(query, limit=3):
             "size": str(tr.select("td.coll-4")[0].text).split('B', 1)[0] + "B",
             "uploader": tr.select("td.coll-5 > a")[0].text,
             "link": f"http://1337x.to{a['href']}",
-            "magnet": e['href'],
-            "shortlink": shorten(e['href'])
+            #"magnet": e['href'],
+            #"shortlink": shorten(e['href'])
         })
 
         if limit is not None:
             i += 1
             if i >= limit:
                 break
+        async with aiohttp.ClientSession() as session:
+            htmls = await fetch_all(session, urls)
+        for torrent, li in zip(htmls, torrents):
+            torrent = BeautifulSoup(torrent, 'lxml')
+            e = torrent.find('a', href=re.compile(r"^magnet"))
+            li['magnet'] = e['href'],
+            li['shortlink']: shorten(e['href'])
     return torrents
 
 
@@ -80,7 +104,7 @@ def searchRarbg(query, limit=3):
     torrents = []
     i = 0    
     source = get(
-        f"http://rarbg.to/search/?search={query}"
+        f"http://rargb.to/search/?search={query}"
         "&category[]=movies&category[]=tv&category[]=games&"
         "category[]=music&category[]=anime&category[]=apps&"
         "category[]=documentaries&category[]=other"
@@ -88,7 +112,7 @@ def searchRarbg(query, limit=3):
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tr.lista2"):
         tds = tr.select("td")
-        torrent = get(f"http://rarbg.to{tds[1].a['href']}").text
+        torrent = get(f"http://rargb.to{tds[1].a['href']}").text
         torrent = BeautifulSoup(torrent, 'lxml')
         e = torrent.find('a', href=re.compile(r"^magnet"))
         if e is None:
@@ -99,7 +123,7 @@ def searchRarbg(query, limit=3):
             "leeches": toInt(tds[6].text),
             "size": tds[4].text,
             "uploader": tds[7].text,
-            "link": f"http://rarbg.to{tds[1].a['href']}",
+            "link": f"http://rargb.to{tds[1].a['href']}",
             "magnet": e['href'],
             "shortlink": shorten(e['href'])})
         if limit is not None:
@@ -153,3 +177,6 @@ def searchEttv(query):
             "link": f"http://www.ettvdl.com{tds[1].a['href']}"
         })
     return torrents
+
+if __name__ == "__main__":
+    print(asyncio.run(search1337x('witcher')))

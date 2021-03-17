@@ -1,3 +1,4 @@
+# TODO: allow flask to handle async function
 import flask
 import requests_cache
 from flask import request
