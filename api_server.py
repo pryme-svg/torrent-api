@@ -1,11 +1,12 @@
 import json
+import os
 import tornado.ioloop
 import tornado.web
 import scraper
 
 class Torrents(tornado.web.RequestHandler):
     def prepare(self):
-        header = "Content-Type"
+        header = "Content-Type" 
         body = "application/json"
         self.set_header(header, body)
 

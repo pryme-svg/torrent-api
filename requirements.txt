@@ -1,7 +1,4 @@
 bs4
-requests_cache
-gunicorn
-flask
+tornado
 requests
 lxml
-gevent
