@@ -1,42 +1,51 @@
-import flask
-import requests_cache
-from flask import request
-import traceback
-from flask import Response
 import json
+import os
+import tornado.ioloop
+import tornado.web
 import scraper
 
-requests_cache.install_cache('requests_cache')
+class Torrents(tornado.web.RequestHandler):
+    def prepare(self):
+        header = "Content-Type" 
+        body = "application/json"
+        self.set_header(header, body)
 
-app = flask.Flask(__name__)
-app.config["DEBUG"] = True
-
-
-@app.route('/', methods=["GET"])
-def getSites():
-    sites = ["1337x", "tpb", "Ettvdl", "Rarbg", 'nyaa']
-    return Response(json.dumps({"sites": sites}), mimetype='application/json')
-
-
-@app.route('/getTorrents', methods=["GET"])
-def getTorrents():
-    query = request.args.get("query")
-    if(query is None or query == ""):
-        return Response(json.dumps("Invalid Request"))
-    site = request.args.get("site")
-    try:
-        if(site == "1337x"):
-            return Response(json.dumps({"torrents": scraper.search1337x(query)}), mimetype="application/json")
-        elif(site == "nyaa"):
-            return Response(json.dumps({'torrents': scraper.searchNyaa(query)}), mimetype="application/json")
-        elif(site == "tpb"):
-            return Response(json.dumps({"torrents": scraper.searchTPB(query)}), mimetype="application/json")
-        elif(site == "Rarbg"):
-            return Response(json.dumps({"torrents": scraper.searchRarbg(query)}), mimetype="application/json")
-        elif(site == "Ettvdl"):
-            return Response(json.dumps({"torrents": scraper.searchEttv(query)}), mimetype="application/json")
+    async def get(self):
+        query = self.get_argument('query', None)
+        site = self.get_argument('site', None)
+        try:
+            site
+        except NameError:
+            site = "1337x"
+        if query is None:
+            raise tornado.web.HTTPError(400)
+        if site == "1337x":
+            data = json.dumps({"torrents": await scraper.search1337x(query)})
+        elif site == "nyaa":
+            data = json.dumps({"torrents": await scraper.searchNyaa(query)})
+        elif site == "Rarbg":
+            data = json.dumps({"torrents": await scraper.searchRarbg(query)})
+        elif site == "tpb":
+            data = json.dumps({"torrents": await scraper.searchTPB(query)})
         else:
-            return Response(json.dumps({"torrents": scraper.search1337x(query)}), mimetype="application/json")
-    except Exception as e:
-        print(traceback.format_exc())
-        return Response(json.dumps("Invalid Request"))
+            data = json.dumps({"torrents": await scraper.search1337x(query)})
+        self.write(data)
+
+class Info(tornado.web.RequestHandler):
+    def prepare(self):
+        header = "Content-Type"
+        body = "application/json"
+        self.set_header(header, body)    
+
+    async def get(self):
+        gh = "https://github.com/pryme-svg/torrent-api"
+        sites = ["1337x", "tpb", "Ettvdl", "Rarbg", 'nyaa']
+        data = json.dumps({"github": gh, "sites": sites})
+        self.write(data)
+
+if __name__ == '__main__':
+    app = tornado.web.Application([ (r'/getTorrents', Torrents), (r'/', Info) ])
+    port = int(os.environ.get("PORT", 5000))
+    app.listen(port)
+    print('Starting server on port {}'.format(port))
+    tornado.ioloop.IOLoop.instance().start()

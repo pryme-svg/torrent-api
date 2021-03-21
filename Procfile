@@ -1,1 +1,1 @@
-web: gunicorn wsgi:app -k gevent -w 4
+web: python api_server.py
