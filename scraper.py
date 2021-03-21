@@ -69,21 +69,22 @@ async def search1337x(query, limit=3):
             #"shortlink": shorten(e['href'])
         })
 
-        if limit is not None:
-            i += 1
-            if i >= limit:
-                break
+
         async with aiohttp.ClientSession() as session:
             htmls = await fetch_all(session, urls)
         for torrent, li in zip(htmls, torrents):
             torrent = BeautifulSoup(torrent, 'lxml')
             e = torrent.find('a', href=re.compile(r"^magnet"))
-            li['magnet'] = e['href'],
-            li['shortlink']: shorten(e['href'])
+            li['magnet'] = e['href']
+            li['shortlink'] = shorten(e['href'])
+        if limit is not None:
+            i += 1
+            if i >= limit:
+                break
     return torrents
 
 
-def searchTPB(query):
+async def searchTPB(query):
     torrents = []
     resp_json = get(f"http://apibay.org/q.php?q={query}&cat=100,200,300,400,600").json()
     if(resp_json[0]["name"] == "No results returned"):
@@ -100,8 +101,9 @@ def searchTPB(query):
     return torrents
 
 
-def searchRarbg(query, limit=3):
+async def searchRarbg(query, limit=3):
     torrents = []
+    urls = []
     i = 0    
     source = get(
         f"http://rargb.to/search/?search={query}"
@@ -112,11 +114,10 @@ def searchRarbg(query, limit=3):
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tr.lista2"):
         tds = tr.select("td")
-        torrent = get(f"http://rargb.to{tds[1].a['href']}").text
-        torrent = BeautifulSoup(torrent, 'lxml')
-        e = torrent.find('a', href=re.compile(r"^magnet"))
-        if e is None:
-            e = {'href': None}
+        urls.append("http://rargb.to/{}".format(tds[1].a['href']))
+        #torrent = get(f"http://rargb.to{tds[1].a['href']}").text
+        #torrent = BeautifulSoup(torrent, 'lxml')
+        #e = torrent.find('a', href=re.compile(r"^magnet"))
         torrents.append({
             "name": tds[1].a.text,
             "seeds": toInt(tds[5].font.text),
@@ -124,16 +125,25 @@ def searchRarbg(query, limit=3):
             "size": tds[4].text,
             "uploader": tds[7].text,
             "link": f"http://rargb.to{tds[1].a['href']}",
-            "magnet": e['href'],
-            "shortlink": shorten(e['href'])})
+            #"magnet": e['href'],
+            #"shortlink": shorten(e['href'])})
+        })
+        async with aiohttp.ClientSession() as session:
+            htmls = await fetch_all(session, urls)
+        for torrent, li in zip(htmls, torrents):
+            torrent = BeautifulSoup(torrent, 'lxml')
+            e = torrent.find('a', href=re.compile(r"^magnet"))
+            if e is None:
+                e = {'href': None}
+            li['magnet'] = e['href']
+            li['shortlink'] = shorten(e['href'])
         if limit is not None:
             i += 1
         if i >= limit:
             break
     return torrents
 
-
-def searchNyaa(query, limit=3):
+async def searchNyaa(query, limit=3):
     torrents = []
     i = 0
     source = get("https://nyaa.si/?q={}&s=seeders".format(query)).text
