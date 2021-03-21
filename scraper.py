@@ -1,4 +1,5 @@
 import re
+from aiohttp_client_cache import CachedSession, SQLiteBackend
 import aiohttp
 import asyncio
 import requests
@@ -70,7 +71,7 @@ async def search1337x(query, limit=3):
         })
 
 
-        async with aiohttp.ClientSession() as session:
+        async with CachedSession(cache=SQLiteBackend()) as session:
             htmls = await fetch_all(session, urls)
         for torrent, li in zip(htmls, torrents):
             torrent = BeautifulSoup(torrent, 'lxml')
@@ -128,7 +129,7 @@ async def searchRarbg(query, limit=3):
             #"magnet": e['href'],
             #"shortlink": shorten(e['href'])})
         })
-        async with aiohttp.ClientSession() as session:
+        async with CachedSession(cache=SQLiteBackend()) as session:
             htmls = await fetch_all(session, urls)
         for torrent, li in zip(htmls, torrents):
             torrent = BeautifulSoup(torrent, 'lxml')

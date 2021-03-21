@@ -3,3 +3,5 @@ aiohttp
 tornado
 requests
 lxml
+aiohttp-client-cache
+aiosqlite
