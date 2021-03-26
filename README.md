@@ -21,5 +21,5 @@ pip install -r requirements.txt
 Run the server
 
 ```
-gunicorn wsgi:app
+python api_server.py
 ```
