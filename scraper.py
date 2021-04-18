@@ -1,12 +1,9 @@
 import re
+import json
 from aiohttp_client_cache import CachedSession, SQLiteBackend
-import aiohttp
 import asyncio
-import requests_cache
-import requests
 from bs4 import BeautifulSoup
 
-requests_cache.install_cache('torrent_cache')
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36 Edg/83.0.478.45",
@@ -14,10 +11,17 @@ headers = {
     "Connection": "keep-alive"
 }
 
+session = CachedSession(cache=SQLiteBackend(
+    cache_name='torrent_cache',
+    expire_after=60*60*3,
+    allowed_codes=(200, 418),
+))
 
-def shorten(magnet):
+
+async def shorten(magnet):
     url = "http://mgnet.me/api/create?&format=json&opt=&m={}".format(magnet)
-    e = requests.get(url).json()
+    e = await session.get(url)
+    e = json.loads(await e.text())
     return e['shorturl']
 
 
@@ -29,23 +33,23 @@ def convertBytes(num):
         num /= step_unit
 
 
-def get(url):
-    return requests.get(url, headers=headers)
+async def get(url):
+    return await session.get(url, headers=headers)
 
 
 def toInt(value):
     return int(value.replace(',', ''))
 
-async def fetch(session, url):
+async def fetch(url):
     async with session.get(url) as response:
         if response.status != 200:
             response.raise_for_status()
         return await response.text()
 
-async def fetch_all(session, urls):
+async def fetch_all(urls):
     tasks = []
     for url in urls:
-        task = asyncio.create_task(fetch(session, url))
+        task = asyncio.create_task(fetch(url))
         tasks.append(task)
     results = await asyncio.gather(*tasks)
     return results
@@ -53,7 +57,8 @@ async def fetch_all(session, urls):
 async def search1337x(query, limit=3):
     torrents = []
     urls = []
-    source = get(f"http://1337x.to/search/{query}/1/").text
+    source = await get(f"http://1337x.to/search/{query}/1/")
+    source = await source.text()
     soup = BeautifulSoup(source, 'lxml')
     i = 0
     for tr in soup.select("tbody > tr"):
@@ -74,13 +79,12 @@ async def search1337x(query, limit=3):
         })
 
 
-        async with CachedSession(cache=SQLiteBackend()) as session:
-            htmls = await fetch_all(session, urls)
+        htmls = await fetch_all(urls)
         for torrent, li in zip(htmls, torrents):
             torrent = BeautifulSoup(torrent, 'lxml')
             e = torrent.find('a', href=re.compile(r"^magnet"))
             li['magnet'] = e['href']
-            li['shortlink'] = shorten(e['href'])
+            li['shortlink'] = await shorten(e['href'])
         if limit is not None:
             i += 1
             if i >= limit:
@@ -90,7 +94,8 @@ async def search1337x(query, limit=3):
 
 async def searchTPB(query):
     torrents = []
-    resp_json = get(f"http://apibay.org/q.php?q={query}&cat=100,200,300,400,600").json()
+    resp_json = await get(f"http://apibay.org/q.php?q={query}&cat=100,200,300,400,600")
+    resp_json = await resp_json.json()
     if(resp_json[0]["name"] == "No results returned"):
         return torrents
 
@@ -109,12 +114,13 @@ async def searchRarbg(query, limit=3):
     torrents = []
     urls = []
     i = 0    
-    source = get(
+    source = await get(
         f"http://rargb.to/search/?search={query}"
         "&category[]=movies&category[]=tv&category[]=games&"
         "category[]=music&category[]=anime&category[]=apps&"
         "category[]=documentaries&category[]=other"
-    ).text
+    )
+    source = await source.text()
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tr.lista2"):
         tds = tr.select("td")
@@ -132,15 +138,14 @@ async def searchRarbg(query, limit=3):
             #"magnet": e['href'],
             #"shortlink": shorten(e['href'])})
         })
-        async with CachedSession(cache=SQLiteBackend()) as session:
-            htmls = await fetch_all(session, urls)
+        htmls = await fetch_all(urls)
         for torrent, li in zip(htmls, torrents):
             torrent = BeautifulSoup(torrent, 'lxml')
             e = torrent.find('a', href=re.compile(r"^magnet"))
             if e is None:
                 e = {'href': None}
             li['magnet'] = e['href']
-            li['shortlink'] = shorten(e['href'])
+            li['shortlink'] = await shorten(e['href'])
         if limit is not None:
             i += 1
         if i >= limit:
@@ -150,7 +155,8 @@ async def searchRarbg(query, limit=3):
 async def searchNyaa(query, limit=3):
     torrents = []
     i = 0
-    source = get("https://nyaa.si/?q={}&s=seeders".format(query)).text
+    source = await get("https://nyaa.si/?q={}&s=seeders".format(query))
+    source = await source.text()
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("tbody > tr"):
         e = tr.select('td')
@@ -167,7 +173,7 @@ async def searchNyaa(query, limit=3):
             "size": size,
             "link": f"http://nyaa.si{link}",
             "magnet": magnet,
-            "shortlink": shorten(magnet)
+            "shortlink": await shorten(magnet)
         })
         if limit is not None:
             i += 1
@@ -176,9 +182,10 @@ async def searchNyaa(query, limit=3):
     return torrents
 
 
-def searchEttv(query):
+async def searchEttv(query):
     torrents = []
-    source = get(f"http://www.ettvcentral.com/torrents-search.php?search={query}").text
+    source = await get(f"http://www.ettvcentral.com/torrents-search.php?search={query}")
+    source = await source.text()
     soup = BeautifulSoup(source, "lxml")
     for tr in soup.select("table > tr"):
         tds = tr.select("td")

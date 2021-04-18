@@ -1,8 +1,5 @@
 bs4
-aiohttp
 tornado
-requests
 lxml
 aiohttp-client-cache
 aiosqlite
-requests_cache

@@ -1,4 +1,4 @@
 __pycache__/
-requests_cache.sqlite
 .vscode/
-aiohttp-cache.sqlite
+torrent_cache.sqlite
+venv/
